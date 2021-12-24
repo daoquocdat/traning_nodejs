@@ -29,25 +29,30 @@ class UserController {
             address: req.body.address,
         })
         .then((user) => {
-            const name = user.firstName +' '+ user.lastName;
+            var name
+            if(user.lastName != undefined || user.lastName!=''){
+                name = user.firstName +' '+ user.lastName;
+            }
+            else{
+                name = user.firstName
+            }
             const email = user.email
             //create user activity
             const userActivity = new UserActivityModel_MongoDB({
                 email: email,
                 name: name,
                 activity: {
-                    $push: {
-                        nameActivities: 'create',
-                        time: user.dataValues.createdAt,
-                    }  
+                    nameAc: 'create',
+                    time: user.createdAt,
                 },
             })
             .save()
             .then((userActivity) => {
-                console.log('thêm thành công')
-                const token = createToken(user.id)
-                res.cookie('jwt', token, { httpOnly: true, maxAge: maxAge * 1000})
-                res.json(token)
+                console.log('thêm thành công', userActivity)
+                const token = createToken(user.userid)
+                //res.cookie('jwt', token, { httpOnly: true, maxAge: maxAge * 1000})
+                res.status = res.statusCode
+                next()
             })
             .catch((err) =>{
                 console.log(err)
@@ -61,7 +66,9 @@ class UserController {
     async view(req, res, next){
         await UserModel_SQL.findAll({})
             .then((listUser) => {
-                res.json(listUser);
+                res.status = res.statusCode
+                res.listUser = listUser
+                next()
             })
             .catch(next);
     }
@@ -74,13 +81,31 @@ class UserController {
                 where: {email: email}
             })
             .then(async (account) => {
-                console.log(account)
-                const auth = await bcrypt.compare(password, account.password)
-                console.log(auth)
+                const auth = await bcrypt.compare(password, account.password);
                 if(auth){
-                    const token = createToken(account.id)
-                    res.cookie('jwt', token, { httpOnly: true, maxAge: maxAge * 1000})
-                    res.json( { account: account.id })
+                    const token = createToken(account.userid);
+                    const dateTime = new Date(Date.now());
+                    //update user activity
+                    const user = UserActivityModel_MongoDB.updateOne({
+                            email: account.email
+                        },{
+                            $push: {
+                                activity: {
+                                    nameAc: 'login',
+                                    time: dateTime
+                                } 
+                        },
+                    }).then(()=>{
+                        console.log('update activities succesfully')
+                        res.status = res.statusCode
+                        res.account = account
+                        next()
+                    })
+                    .catch((res)=>{
+                        console.log(res)
+                        next()
+                    })
+                    
                 }
             })
             .catch(next);
@@ -93,8 +118,27 @@ class UserController {
         }
     }     
     logout(req, res, next){
-        res.cookie('jwt', '', { maxAge: 1 })
-        res.json( { status:'logout' })
+        console.log(res.user)
+        const dateTime = new Date(Date.now());
+        const user = UserActivityModel_MongoDB.updateOne({
+                email: res.user.email
+            },{
+                $push: {
+                    activity: {
+                        nameAc: 'logout',
+                        time: dateTime
+                    } 
+            },
+        }).then(()=>{
+            console.log('update activities succesfully')
+            res.status = res.statusCode
+            res.message = 'logout'
+            next()
+        })
+        .catch((res)=>{
+            console.log(res)
+        })
+        
     }
     
 }

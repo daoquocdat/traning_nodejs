@@ -1,4 +1,4 @@
-const mongoose = require('mongoose')
+const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const activities = new Schema({
@@ -8,15 +8,17 @@ const activities = new Schema({
     name: {
         type: String
     },
-    activity: [{
-        nameActivities:{
-            type: String
-        },
-        time:{ 
-            type: Date, 
-            default: Date.now
+    activity: [
+        {
+            nameAc:{
+                type: String
+            },
+            time:{ 
+                type: Date, 
+                default: Date.now
+            }
         }
-    }],
+    ],
 })
 
-module.exports = mongoose.model('activities',activities,'user_activities')
+module.exports = mongoose.model('activities',activities);
